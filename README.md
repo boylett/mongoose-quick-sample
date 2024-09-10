@@ -1,4 +1,4 @@
-# [Mongoose](https://mongoosejs.com) QuickSample
+# [Mongoose](https://mongoosejs.com) QuickSample [![1.0.0](https://badgen.net/badge/npm/1.0.0/blue)](https://www.npmjs.com/package/mongoose-quick-sample)
 Quick and efficient random sampling of records utilizing a seed field.
 
 Rather than relying on the painfully slow `$sample` aggregation stage, Mongoose QuickSample embeds a simple numeric `__seed` field in your schemas that is autopopulated with a random number between 0 and 1.
