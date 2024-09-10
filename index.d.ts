@@ -2,19 +2,19 @@ import Mongoose from "mongoose";
 declare module "mongoose" {
     interface Aggregate<ResultType> {
         /**
-         * Sort the current aggregation by `__seed`, limit the results, then reset the seeds
+         * Sort the current aggregation by `__seed` and limit the results
          *
          * @param limit The number of documents to return
          */
-        quickSample(this: Mongoose.Aggregate<ResultType>, limit: number): Promise<ResultType>;
+        quickSample(this: Mongoose.Aggregate<ResultType>, limit: number): Mongoose.Aggregate<ResultType>;
     }
     interface Query<ResultType, DocType, THelpers = {}> {
         /**
-         * Sort the current query by `__seed`, limit the results, then reset the seeds
+         * Sort the current query by `__seed` and limit the results
          *
          * @param limit The number of documents to return
          */
-        quickSample(limit: number): Promise<ResultType>;
+        quickSample(limit: number): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>;
     }
     interface Schema {
         /**

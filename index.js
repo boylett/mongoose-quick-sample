@@ -14,6 +14,9 @@ var QuickSample;
      * @param options Additional type options for the `__seed` path
      */
     function Plugin(schema, { autoInsert = true, ...options } = {}) {
+        // Yoink!
+        const aggregateExec = mongoose_1.default.Aggregate.prototype.exec;
+        const queryExec = mongoose_1.default.Query.prototype.exec;
         // Add the seed to the schema
         schema.add({
             __seed: {
@@ -24,25 +27,25 @@ var QuickSample;
             },
         });
         /**
-         * Sort the current query by `__seed`, limit the results, then reset the seeds
+         * Sort the current query by `__seed` and limit the results
          *
-         * @param limit The number of documents to return
+         * @param limit The number of documents to limit to
          */
-        mongoose_1.default.Aggregate.prototype.quickSample = async function (limit = 50) {
-            // Get the model
-            const model = this.model();
-            // If the __seed is not part of the schema, throw an error
-            if (!model.schema.paths.__seed) {
-                throw new Error(`'__seed' is not part of the '${model.modelName}' schema`);
-            }
-            // Execute the aggregation
-            const results = (await this
-                .sort({ __seed: 1 })
-                .limit(limit)
-                .exec());
-            // If we can reliably retrieve IDs for each item, reset their seeds
-            if (results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
-                await model
+        mongoose_1.default.Aggregate.prototype.quickSample = function (limit = 50) {
+            return this.sort({ __seed: 1 }).limit(limit);
+        };
+        /**
+         * Executes the aggregate pipeline on the currently bound Model.
+         */
+        mongoose_1.default.Aggregate.prototype.exec = async function () {
+            // Call the executor super
+            const results = await aggregateExec.apply(this);
+            if (
+            // If we sorted by seed
+            this.pipeline().some(stage => "$sort" in stage && "__seed" in stage["$sort"]) &&
+                // If we can reliably retrieve IDs for each item, reset their seeds
+                results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
+                await this.model()
                     .updateMany(autoInsert
                     ? {
                         $or: [
@@ -79,18 +82,22 @@ var QuickSample;
          *
          * @param limit The number of documents to return
          */
-        schema.query.quickSample = async function (limit = 50) {
-            // If the __seed is not part of the schema, throw an error
-            if (!this.model.schema.paths.__seed) {
-                throw new Error(`'__seed' is not part of the '${this.model.modelName}' schema`);
-            }
-            // Execute the query
-            const results = (await this
-                .sort({ __seed: 1 })
-                .limit(limit)
-                .exec());
-            // If we can reliably retrieve IDs for each item, reset their seeds
-            if (results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
+        schema.query.quickSample = function (limit = 50) {
+            return this.sort({ __seed: 1 }).limit(limit);
+        };
+        /**
+         * Executes the query
+         */
+        mongoose_1.default.Query.prototype.exec = async function () {
+            // Call the executor super
+            const results = await queryExec.apply(this);
+            // Get query options
+            const options = this.getOptions();
+            if (
+            // If we sorted by seed
+            options.sort && "__seed" in options.sort &&
+                // If we can reliably retrieve IDs for each item, reset their seeds
+                results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
                 await this.model
                     .updateMany(autoInsert
                     ? {

@@ -3,25 +3,25 @@ import Mongoose from "mongoose";
 declare module "mongoose" {
   interface Aggregate<ResultType> {
     /**
-     * Sort the current aggregation by `__seed`, limit the results, then reset the seeds
+     * Sort the current aggregation by `__seed` and limit the results
      *
      * @param limit The number of documents to return
      */
     quickSample (
       this: Mongoose.Aggregate<ResultType>,
       limit: number
-    ): Promise<ResultType>;
+    ): Mongoose.Aggregate<ResultType>;
   }
 
   interface Query<ResultType, DocType, THelpers = {}> {
     /**
-     * Sort the current query by `__seed`, limit the results, then reset the seeds
+     * Sort the current query by `__seed` and limit the results
      *
      * @param limit The number of documents to return
      */
     quickSample (
       limit: number
-    ): Promise<ResultType>;
+    ): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>;
   }
 
   interface Schema {
@@ -59,6 +59,10 @@ export namespace QuickSample {
       autoInsert?: boolean;
     } = {}
   ): void {
+    // Yoink!
+    const aggregateExec = Mongoose.Aggregate.prototype.exec;
+    const queryExec = Mongoose.Query.prototype.exec;
+
     // Add the seed to the schema
     schema.add({
       __seed: {
@@ -70,33 +74,31 @@ export namespace QuickSample {
     });
 
     /**
-     * Sort the current query by `__seed`, limit the results, then reset the seeds
+     * Sort the current query by `__seed` and limit the results
      *
-     * @param limit The number of documents to return
+     * @param limit The number of documents to limit to
      */
-    Mongoose.Aggregate.prototype.quickSample = async function <ResultType> (
+    Mongoose.Aggregate.prototype.quickSample = function <ResultType> (
       this: Mongoose.Aggregate<ResultType>,
       limit: number = 50
-    ): Promise<ResultType> {
-      // Get the model
-      const model = this.model();
+    ): Mongoose.Aggregate<ResultType> {
+      return this.sort({ __seed: 1 }).limit(limit);
+    };
 
-      // If the __seed is not part of the schema, throw an error
-      if (!model.schema.paths.__seed) {
-        throw new Error(`'__seed' is not part of the '${ model.modelName }' schema`);
-      }
+    /**
+     * Executes the aggregate pipeline on the currently bound Model.
+     */
+    Mongoose.Aggregate.prototype.exec = async function () {
+      // Call the executor super
+      const results = await aggregateExec.apply(this);
 
-      // Execute the aggregation
-      const results = (
-        await this
-          .sort({ __seed: 1 })
-          .limit(limit)
-          .exec()
-      );
-
-      // If we can reliably retrieve IDs for each item, reset their seeds
-      if (results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
-        await model
+      if (
+        // If we sorted by seed
+        this.pipeline().some(stage => "$sort" in stage && "__seed" in stage[ "$sort" ]) &&
+        // If we can reliably retrieve IDs for each item, reset their seeds
+        results && Array.isArray(results) && results.some(item => item._id !== undefined)
+      ) {
+        await this.model()
           .updateMany(autoInsert
             ? {
               $or: [
@@ -135,25 +137,29 @@ export namespace QuickSample {
      *
      * @param limit The number of documents to return
      */
-    schema.query.quickSample = async function <ResultType> (
-      this: Mongoose.QueryWithHelpers<any, Mongoose.HydratedDocument<ResultType>>,
+    schema.query.quickSample = function <ResultType, DocType, THelpers = {}> (
+      this: Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>,
       limit: number = 50
-    ): Promise<ResultType> {
-      // If the __seed is not part of the schema, throw an error
-      if (!this.model.schema.paths.__seed) {
-        throw new Error(`'__seed' is not part of the '${ this.model.modelName }' schema`);
-      }
+    ): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers> {
+      return this.sort({ __seed: 1 }).limit(limit);
+    };
 
-      // Execute the query
-      const results = (
-        await this
-          .sort({ __seed: 1 })
-          .limit(limit)
-          .exec()
-      );
+    /**
+     * Executes the query
+     */
+    Mongoose.Query.prototype.exec = async function () {
+      // Call the executor super
+      const results = await queryExec.apply(this);
 
-      // If we can reliably retrieve IDs for each item, reset their seeds
-      if (results && Array.isArray(results) && results.some(item => item._id !== undefined)) {
+      // Get query options
+      const options = this.getOptions();
+
+      if (
+        // If we sorted by seed
+        options.sort && "__seed" in options.sort &&
+        // If we can reliably retrieve IDs for each item, reset their seeds
+        results && Array.isArray(results) && results.some(item => item._id !== undefined)
+      ) {
         await this.model
           .updateMany(autoInsert
             ? {
