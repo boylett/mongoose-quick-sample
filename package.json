@@ -1,0 +1,35 @@
+{
+  "name": "mongoose-quick-sample",
+  "version": "1.0.0",
+  "description": "Quick and efficient random sampling of records utilizing a seed field.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boylett/mongoose-quick-sample.git"
+  },
+  "keywords": [
+    "mongoose",
+    "quick",
+    "sample",
+    "sort",
+    "random",
+    "seed"
+  ],
+  "author": "boylett <https://github.com/boylett>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/boylett/mongoose-quick-sample/issues"
+  },
+  "homepage": "https://github.com/boylett/mongoose-quick-sample#readme",
+  "devDependencies": {
+    "mongoose": "^8.6.1",
+    "typescript": "^5.6.2"
+  },
+  "peerDependencies": {
+    "mongoose": ">=8.x"
+  }
+}
