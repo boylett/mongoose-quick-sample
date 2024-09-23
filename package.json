@@ -1,6 +1,6 @@
 {
   "name": "mongoose-quick-sample",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Quick and efficient random sampling of records utilizing a seed field.",
   "main": "index.js",
   "types": "index.d.ts",

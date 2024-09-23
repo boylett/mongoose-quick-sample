@@ -1,4 +1,4 @@
-# [Mongoose](https://mongoosejs.com) QuickSample [![1.0.1](https://badgen.net/badge/npm/1.0.1/blue)](https://www.npmjs.com/package/mongoose-quick-sample)
+# [Mongoose](https://mongoosejs.com) QuickSample [![1.0.2](https://badgen.net/badge/npm/1.0.2/blue)](https://www.npmjs.com/package/mongoose-quick-sample)
 Quick and efficient random sampling of records utilizing a seed field.
 
 Rather than relying on the painfully slow `$sample` aggregation stage, Mongoose QuickSample embeds a simple numeric `__seed` field in your schemas that is autopopulated with a random number between 0 and 1.
@@ -19,8 +19,14 @@ Import and install the Mongoose plugin
 import mongoose from "mongoose";
 import { QuickSample } from "mongoose-quick-sample";
 
+// Enable per-schema (recommended)
+schema.plugin(QuickSample.Plugin);
+
+// Enable globally
 mongoose.plugin(QuickSample.Plugin);
 ```
+
+***Note:** If you enable QuickSample globally, every record in every collection will gain a `__seed` field. So be warned!*
 
 ## Usage
 
@@ -47,7 +53,7 @@ const posts = await PostsModel
 ```
 
 > [!NOTE]
-> When you run your first `quickSample` on any given schema, mongoose will automatically populate all documents in the collection that do not yet have a `__seed` field.
+> When you run your first `quickSample` on a given schema, mongoose will automatically populate all documents in the collection that do not yet have a `__seed` field.
 >
 > If your collection is particularly large or you'd rather do this yourself, you can set `autoInsert` to false in the plugin options (see below).
 

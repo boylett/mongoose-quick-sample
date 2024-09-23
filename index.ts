@@ -13,15 +13,38 @@ declare module "mongoose" {
     ): Mongoose.Aggregate<ResultType>;
   }
 
-  interface Query<ResultType, DocType, THelpers = {}> {
+  interface Query<ResultType, DocType, THelpers = {}, RawDocType = unknown, QueryOp = "find", TInstanceMethods = Record<string, never>> {
     /**
      * Sort the current query by `__seed` and limit the results
      *
      * @param limit The number of documents to return
      */
-    quickSample (
+    quickSample<RawDocTypeOverride extends { [ P in keyof RawDocType ]?: any } = {}> (
       limit: number
-    ): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>;
+    ): QueryWithHelpers<
+      IfEquals<
+        RawDocTypeOverride,
+        {},
+        ResultType,
+        ResultType extends any[]
+        ? ResultType extends HydratedDocument<any>[]
+        ? HydratedDocument<RawDocTypeOverride>[]
+        : RawDocTypeOverride[]
+        : (ResultType extends HydratedDocument<any>
+          ? HydratedDocument<RawDocTypeOverride>
+          : RawDocTypeOverride) | (null extends ResultType ? null : never)
+      >,
+      DocType,
+      THelpers,
+      IfEquals<
+        RawDocTypeOverride,
+        {},
+        RawDocType,
+        RawDocTypeOverride
+      >,
+      QueryOp,
+      TInstanceMethods
+    >;
   }
 
   interface Schema {
@@ -137,10 +160,10 @@ export namespace QuickSample {
      *
      * @param limit The number of documents to return
      */
-    schema.query.quickSample = function <ResultType, DocType, THelpers = {}> (
-      this: Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>,
+    schema.query.quickSample = function <ResultType, DocType> (
+      this: Mongoose.QueryWithHelpers<ResultType, DocType>,
       limit: number = 50
-    ): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers> {
+    ) {
       return this.sort({ __seed: 1 }).limit(limit);
     };
 

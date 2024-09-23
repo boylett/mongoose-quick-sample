@@ -8,13 +8,15 @@ declare module "mongoose" {
          */
         quickSample(this: Mongoose.Aggregate<ResultType>, limit: number): Mongoose.Aggregate<ResultType>;
     }
-    interface Query<ResultType, DocType, THelpers = {}> {
+    interface Query<ResultType, DocType, THelpers = {}, RawDocType = unknown, QueryOp = "find", TInstanceMethods = Record<string, never>> {
         /**
          * Sort the current query by `__seed` and limit the results
          *
          * @param limit The number of documents to return
          */
-        quickSample(limit: number): Mongoose.QueryWithHelpers<ResultType, DocType, THelpers>;
+        quickSample<RawDocTypeOverride extends {
+            [P in keyof RawDocType]?: any;
+        } = {}>(limit: number): QueryWithHelpers<IfEquals<RawDocTypeOverride, {}, ResultType, ResultType extends any[] ? ResultType extends HydratedDocument<any>[] ? HydratedDocument<RawDocTypeOverride>[] : RawDocTypeOverride[] : (ResultType extends HydratedDocument<any> ? HydratedDocument<RawDocTypeOverride> : RawDocTypeOverride) | (null extends ResultType ? null : never)>, DocType, THelpers, IfEquals<RawDocTypeOverride, {}, RawDocType, RawDocTypeOverride>, QueryOp, TInstanceMethods>;
     }
     interface Schema {
         /**
